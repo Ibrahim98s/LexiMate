@@ -1,31 +1,71 @@
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Button from '../../components/Button';
+import Input from '../../components/Input';
 
 export default function LoginScreen() {
     const router = useRouter();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [emailError, setEmailError] = useState('');
+    const [passwordError, setPasswordError] = useState('');
+
+    function validate() {
+        let valid = true;
+
+        if (!email.trim()) {
+            setEmailError('Email is required');
+            valid = false;
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+            setEmailError('Enter a valid email address');
+            valid = false;
+        } else {
+            setEmailError('');
+        }
+
+        if (!password) {
+            setPasswordError('Password is required');
+            valid = false;
+        } else if (password.length < 6) {
+            setPasswordError('Password must be at least 6 characters');
+            valid = false;
+        } else {
+            setPasswordError('');
+        }
+
+        return valid;
+    }
+
+    function handleSignIn() {
+        if (!validate()) return;
+        // Temporary — will be replaced with real Firebase auth later
+        router.replace('/(tabs)');
+    }
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>Welcome back</Text>
             <Text style={styles.subtitle}>Sign in to LexiMate</Text>
 
-            <TextInput
-                style={styles.input}
+            <Input
                 placeholder="Email"
-                placeholderTextColor="#4A5A7A"
                 keyboardType="email-address"
                 autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+                error={emailError}
             />
 
-            <TextInput
-                style={styles.input}
+            <Input
                 placeholder="Password"
-                placeholderTextColor="#4A5A7A"
                 secureTextEntry
+                value={password}
+                onChangeText={setPassword}
+                error={passwordError}
             />
 
-            <TouchableOpacity style={styles.button}>
-                <Text style={styles.buttonText}>Sign In</Text>
-            </TouchableOpacity>
+            <Button label="Sign In" onPress={handleSignIn} />
 
             <Text style={styles.footer}>
                 Don't have an account?{' '}
@@ -54,28 +94,6 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: '#8A9BBF',
         marginBottom: 32,
-    },
-    input: {
-        backgroundColor: '#132240',
-        borderWidth: 1,
-        borderColor: '#2A4470',
-        borderRadius: 12,
-        padding: 16,
-        color: '#F0F4FF',
-        fontSize: 15,
-        marginBottom: 16,
-    },
-    button: {
-        backgroundColor: '#1B4FD8',
-        borderRadius: 12,
-        padding: 16,
-        alignItems: 'center',
-        marginTop: 8,
-    },
-    buttonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
     },
     footer: {
         color: '#8A9BBF',
