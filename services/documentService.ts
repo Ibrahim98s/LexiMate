@@ -14,15 +14,20 @@ export type DocumentAnalysisResult = {
 };
 
 export async function uploadDocument(
-    title: string,
-    originalLanguage: string,
+    imageUri: string,
     targetLanguage: string
 ): Promise<DocumentAnalysisResult> {
-    // TODO Week 4: switch to multipart/form-data once real file upload + OCR is wired up
-    const response = await api.post('/documents/analyze', {
-        title,
-        originalLanguage,
-        targetLanguage,
+    const formData = new FormData();
+    formData.append('file', {
+        uri: imageUri,
+        name: 'document.jpg',
+        type: 'image/jpeg',
+    } as any);
+    formData.append('targetLanguage', targetLanguage);
+
+    const response = await api.post('/documents/analyze', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 30000, // analysis can take longer than a normal request
     });
 
     return response.data;
