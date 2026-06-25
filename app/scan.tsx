@@ -4,6 +4,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguageStore } from '../store/languageStore';
+import { uploadDocument } from '../services/documentService';
 
 export default function ScanScreen() {
     const [permission, requestPermission] = useCameraPermissions();
@@ -33,7 +34,18 @@ export default function ScanScreen() {
         if (!cameraRef.current) return;
         const photo = await cameraRef.current.takePictureAsync();
         console.log('Captured photo:', photo?.uri);
-        router.push('/results');
+
+        try {
+            const result = await uploadDocument(
+                'Scanned Document', // TODO Week 4: real OCR-extracted title
+                'en', // TODO Week 4: detect original language automatically
+                selectedLanguage
+            );
+            router.push({ pathname: '/results', params: { documentId: String(result.id) } });
+        } catch (error) {
+            console.log('Upload failed:', error);
+            router.push('/results'); // fallback so the flow doesn't dead-end during testing
+        }
     }
 
     return (

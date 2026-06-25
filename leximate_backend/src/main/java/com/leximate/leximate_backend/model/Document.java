@@ -2,6 +2,7 @@ package com.leximate.leximate_backend.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "documents")
@@ -31,6 +32,10 @@ public class Document {
 
     @Column(columnDefinition = "TEXT")
     private String translation;
+    @ElementCollection
+        @CollectionTable(name = "document_flagged_points", joinColumns = @JoinColumn(name = "document_id"))
+        @Column(name = "point", columnDefinition = "TEXT")
+        private List<String> flaggedPoints;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -62,6 +67,9 @@ public class Document {
 
     public String getSummary() { return summary; }
     public void setSummary(String summary) { this.summary = summary; }
+
+    public List<String> getFlaggedPoints() { return flaggedPoints; }
+    public void setFlaggedPoints(List<String> flaggedPoints) { this.flaggedPoints = flaggedPoints; }
 
     public String getTranslation() { return translation; }
     public void setTranslation(String translation) { this.translation = translation; }
