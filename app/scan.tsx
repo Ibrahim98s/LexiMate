@@ -8,6 +8,7 @@ import { uploadDocument } from '../services/documentService';
 
 export default function ScanScreen() {
     const [permission, requestPermission] = useCameraPermissions();
+    const [isUploading, setIsUploading] = useState(false);
     const cameraRef = useRef<CameraView>(null);
     const router = useRouter();
     const selectedLanguage = useLanguageStore((state) => state.selectedLanguage);
@@ -31,20 +32,20 @@ export default function ScanScreen() {
     }
 
     async function handleCapture() {
-        if (!cameraRef.current) return;
-        const photo = await cameraRef.current.takePictureAsync();
-        console.log('Captured photo:', photo?.uri);
+        if (!cameraRef.current || isUploading) return;
+        setIsUploading(true);
 
         try {
-            const result = await uploadDocument(
-                'Scanned Document', // TODO Week 4: real OCR-extracted title
-                'en', // TODO Week 4: detect original language automatically
-                selectedLanguage
-            );
+            const photo = await cameraRef.current.takePictureAsync();
+            if (!photo?.uri) throw new Error('No photo captured');
+
+            const result = await uploadDocument(photo.uri, selectedLanguage);
             router.push({ pathname: '/results', params: { documentId: String(result.id) } });
         } catch (error) {
             console.log('Upload failed:', error);
-            router.push('/results'); // fallback so the flow doesn't dead-end during testing
+            router.push('/results');
+        } finally {
+            setIsUploading(false);
         }
     }
 
@@ -61,9 +62,14 @@ export default function ScanScreen() {
                 </TouchableOpacity>
 
                 <View style={styles.controls}>
-                    <TouchableOpacity style={styles.captureButton} onPress={handleCapture}>
+                    <TouchableOpacity
+                        style={[styles.captureButton, isUploading && styles.captureButtonDisabled]}
+                        onPress={handleCapture}
+                        disabled={isUploading}
+                    >
                         <View style={styles.captureInner} />
                     </TouchableOpacity>
+                    {isUploading && <Text style={styles.uploadingText}>Analyzing document...</Text>}
                 </View>
             </CameraView>
         </View>
@@ -108,6 +114,7 @@ const styles = StyleSheet.create({
         bottom: 50,
         width: '100%',
         alignItems: 'center',
+        gap: 12,
     },
     captureButton: {
         width: 72,
@@ -117,11 +124,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    captureButtonDisabled: {
+        opacity: 0.5,
+    },
     captureInner: {
         width: 60,
         height: 60,
         borderRadius: 30,
         backgroundColor: '#FFFFFF',
+    },
+    uploadingText: {
+        color: '#FFFFFF',
+        fontSize: 13,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 12,
     },
     permissionContainer: {
         flex: 1,
