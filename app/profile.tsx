@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 type SettingItem = {
@@ -16,30 +17,32 @@ const settings: SettingItem[] = [
 
 export default function ProfileScreen() {
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-            <View style={styles.profileHeader}>
-                <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>IS</Text>
+        <SafeAreaView style={styles.container} edges={['top']}>
+            <ScrollView contentContainerStyle={styles.content}>
+                <View style={styles.profileHeader}>
+                    <View style={styles.avatar}>
+                        <Text style={styles.avatarText}>IS</Text>
+                    </View>
+                    <Text style={styles.name}>Ismaila Saha</Text>
+                    <Text style={styles.email}>ismaila@example.com</Text>
                 </View>
-                <Text style={styles.name}>Ismaila Saha</Text>
-                <Text style={styles.email}>ismaila@example.com</Text>
-            </View>
 
-            <View style={styles.settingsGroup}>
-                {settings.map((item) => (
-                    <TouchableOpacity key={item.id} style={styles.settingRow}>
-                        <Ionicons name={item.icon} size={20} color="#8A9BBF" />
-                        <Text style={styles.settingLabel}>{item.label}</Text>
-                        <Ionicons name="chevron-forward" size={18} color="#4A5A7A" />
-                    </TouchableOpacity>
-                ))}
-            </View>
+                <View style={styles.settingsGroup}>
+                    {settings.map((item) => (
+                        <TouchableOpacity key={item.id} style={styles.settingRow}>
+                            <Ionicons name={item.icon} size={20} color="#8A9BBF" />
+                            <Text style={styles.settingLabel}>{item.label}</Text>
+                            <Ionicons name="chevron-forward" size={18} color="#4A5A7A" />
+                        </TouchableOpacity>
+                    ))}
+                </View>
 
-            <TouchableOpacity style={styles.logoutButton}>
-                <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-                <Text style={styles.logoutText}>Log Out</Text>
-            </TouchableOpacity>
-        </ScrollView>
+                <TouchableOpacity style={styles.logoutButton}>
+                    <Ionicons name="log-out-outline" size={20} color="#EF4444" />
+                    <Text style={styles.logoutText}>Log Out</Text>
+                </TouchableOpacity>
+            </ScrollView>
+        </SafeAreaView>
     );
 }
 

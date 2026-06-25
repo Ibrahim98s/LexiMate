@@ -4,9 +4,12 @@ export default function RootLayout() {
     return (
         <Stack initialRouteName="index" screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(tabs)" />
             <Stack.Screen name="scan" options={{ presentation: 'modal' }} />
             <Stack.Screen name="language-select" options={{ presentation: 'modal' }} />
             <Stack.Screen name="results" />
+            <Stack.Screen name="profile" options={{ presentation: 'modal' }} />
         </Stack>
     );
 }
