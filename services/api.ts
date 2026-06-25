@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // TODO: replace with real backend URL once Spring Boot + Neon is deployed (Week 2)
-const BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = 'https://shortlist-epidermal-segment.ngrok-free.dev/api';
 
 export const api = axios.create({
     baseURL: BASE_URL,

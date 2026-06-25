@@ -21,6 +21,11 @@ public class DocumentController {
         return documentRepository.findAll();
     }
 
+    @GetMapping("/history")
+    public List<Document> getDocumentHistory() {
+        return documentRepository.findAll();
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Document> getDocumentById(@PathVariable Long id) {
         Optional<Document> document = documentRepository.findById(id);
@@ -30,6 +35,12 @@ public class DocumentController {
 
     @PostMapping
     public Document createDocument(@RequestBody Document document) {
+        return documentRepository.save(document);
+    }
+
+    @PostMapping("/analyze")
+    public Document analyzeDocument(@RequestBody Document document) {
+        // TODO Week 4: replace with real Helsinki-NLP translation + Claude summarization/risk analysis
         return documentRepository.save(document);
     }
 
