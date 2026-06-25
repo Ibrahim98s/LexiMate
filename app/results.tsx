@@ -1,122 +1,136 @@
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, ScrollView, StyleSheet, Animated } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import RiskBadge from '../components/RiskBadge';
 
+// Replace this with your real data fetch from documentService
+const MOCK_RESULT = {
+    riskLevel: 'medium' as 'low' | 'medium' | 'high',
+    summary:
+        'This agreement includes a non-standard indemnification clause that shifts liability disproportionately to one party. Review section 4 before signing.',
+    translation:
+        'Este acuerdo incluye una cláusula de indemnización no estándar que traslada la responsabilidad de manera desproporcionada a una de las partes. Revise la sección 4 antes de firmar.',
+};
+
 export default function ResultsScreen() {
-    const router = useRouter();
-    const [isAnalyzing, setIsAnalyzing] = useState(true);
+    const [loading, setLoading] = useState(true);
+    const [result, setResult] = useState<typeof MOCK_RESULT | null>(null);
+
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(20)).current;
 
     useEffect(() => {
-        // Simulated async analysis — will be replaced with real backend polling later
-        const timer = setTimeout(() => setIsAnalyzing(false), 2500);
+        const timer = setTimeout(() => {
+            setResult(MOCK_RESULT);
+            setLoading(false);
+        }, 1500);
         return () => clearTimeout(timer);
     }, []);
 
-    if (isAnalyzing) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#1B4FD8" />
-                <Text style={styles.loadingText}>Analyzing your document...</Text>
-                <Text style={styles.loadingSubtext}>This usually takes a few seconds</Text>
-            </View>
-        );
-    }
+    useEffect(() => {
+        if (!loading && result) {
+            Animated.parallel([
+                Animated.timing(fadeAnim, {
+                    toValue: 1,
+                    duration: 500,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(slideAnim, {
+                    toValue: 0,
+                    duration: 500,
+                    useNativeDriver: true,
+                }),
+            ]).start();
+        }
+    }, [loading, result]);
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-            <View style={styles.header}>
-                <Text style={styles.title}>Document Analysis</Text>
-                <TouchableOpacity onPress={() => router.replace('/(tabs)')}>
-                    <Ionicons name="close" size={26} color="#F0F4FF" />
-                </TouchableOpacity>
-            </View>
+        <LinearGradient
+            colors={['#0A1628', '#0F1F3A']}
+            style={styles.container}
+        >
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+                {loading ? (
+                    <View style={styles.loadingContainer}>
+                        <Text style={styles.loadingText}>Analyzing document...</Text>
+                    </View>
+                ) : (
+                    result && (
+                        <Animated.View
+                            style={{
+                                opacity: fadeAnim,
+                                transform: [{ translateY: slideAnim }],
+                            }}
+                        >
+                            <View style={styles.riskRow}>
+                                <RiskBadge level={result.riskLevel} />
+                            </View>
 
-            <RiskBadge level="medium" />
+                            <View style={styles.card}>
+                                <Text style={styles.cardLabel}>SUMMARY</Text>
+                                <Text style={styles.cardText}>{result.summary}</Text>
+                            </View>
 
-            <Text style={styles.sectionTitle}>Summary</Text>
-            <Text style={styles.bodyText}>
-                This is a placeholder summary. Once connected to the backend, this section will
-                show an AI-generated plain-language summary of the scanned legal document.
-            </Text>
-
-            <Text style={styles.sectionTitle}>Translation</Text>
-            <Text style={styles.bodyText}>
-                Placeholder translated text will appear here once the document has been processed
-                by the translation service.
-            </Text>
-
-            <Text style={styles.sectionTitle}>Key Points to Review</Text>
-            <View style={styles.pointRow}>
-                <Ionicons name="alert-circle-outline" size={18} color="#F59E0B" />
-                <Text style={styles.pointText}>Placeholder flagged clause #1</Text>
-            </View>
-            <View style={styles.pointRow}>
-                <Ionicons name="alert-circle-outline" size={18} color="#F59E0B" />
-                <Text style={styles.pointText}>Placeholder flagged clause #2</Text>
-            </View>
-        </ScrollView>
+                            <View style={[styles.card, styles.translationCard]}>
+                                <Text style={[styles.cardLabel, styles.translationLabel]}>
+                                    TRANSLATION
+                                </Text>
+                                <Text style={styles.cardText}>{result.translation}</Text>
+                            </View>
+                        </Animated.View>
+                    )
+                )}
+            </ScrollView>
+        </LinearGradient>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#0A1628',
     },
-    content: {
-        padding: 24,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 20,
-    },
-    title: {
-        fontSize: 22,
-        fontWeight: '700',
-        color: '#F0F4FF',
-    },
-    sectionTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#F0F4FF',
-        marginTop: 24,
-        marginBottom: 8,
-    },
-    bodyText: {
-        fontSize: 14,
-        color: '#8A9BBF',
-        lineHeight: 20,
-    },
-    pointRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 8,
-    },
-    pointText: {
-        color: '#F0F4FF',
-        fontSize: 14,
-        flex: 1,
+    scrollContent: {
+        padding: 20,
+        paddingTop: 40,
     },
     loadingContainer: {
-        flex: 1,
-        backgroundColor: '#0A1628',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 12,
+        paddingTop: 100,
     },
     loadingText: {
-        color: '#F0F4FF',
-        fontSize: 16,
-        fontWeight: '600',
-        marginTop: 8,
-    },
-    loadingSubtext: {
         color: '#8A9BBF',
-        fontSize: 13,
+        fontSize: 16,
+    },
+    riskRow: {
+        marginBottom: 20,
+        alignItems: 'flex-start',
+    },
+    card: {
+        backgroundColor: '#132240',
+        borderColor: '#2A4470',
+        borderWidth: 1,
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 16,
+    },
+    translationCard: {
+        borderColor: '#2DD4BF',
+        borderLeftWidth: 3,
+    },
+    cardLabel: {
+        color: '#8A9BBF',
+        fontSize: 12,
+        fontWeight: '600',
+        letterSpacing: 1,
+        marginBottom: 8,
+    },
+    translationLabel: {
+        color: '#2DD4BF',
+    },
+    cardText: {
+        color: '#F0F4FF',
+        fontSize: 15,
+        lineHeight: 22,
     },
 });

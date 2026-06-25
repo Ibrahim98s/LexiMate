@@ -1,17 +1,32 @@
-import { Tabs } from 'expo-router';
+import React from 'react';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { TouchableOpacity } from 'react-native';
 
 export default function TabsLayout() {
+    const router = useRouter();
+
     return (
         <Tabs
             screenOptions={{
-                headerShown: false,
                 tabBarActiveTintColor: '#1B4FD8',
-                tabBarInactiveTintColor: '#8A9BBF',
+                tabBarInactiveTintColor: '#4A5A7A',
                 tabBarStyle: {
-                    backgroundColor: '#0A1628',
+                    backgroundColor: '#132240',
                     borderTopColor: '#2A4470',
                 },
+                headerStyle: {
+                    backgroundColor: '#0A1628',
+                },
+                headerTintColor: '#F0F4FF',
+                headerRight: () => (
+                    <TouchableOpacity
+                        onPress={() => router.push('/profile')}
+                        style={{ marginRight: 16 }}
+                    >
+                        <Ionicons name="person-circle-outline" size={26} color="#F0F4FF" />
+                    </TouchableOpacity>
+                ),
             }}
         >
             <Tabs.Screen
@@ -19,7 +34,7 @@ export default function TabsLayout() {
                 options={{
                     title: 'Home',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="home-outline" color={color} size={size} />
+                        <Ionicons name="home-outline" size={size} color={color} />
                     ),
                 }}
             />
@@ -28,16 +43,25 @@ export default function TabsLayout() {
                 options={{
                     title: 'History',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="document-text-outline" color={color} size={size} />
+                        <Ionicons name="time-outline" size={size} color={color} />
                     ),
                 }}
             />
             <Tabs.Screen
-                name="profile"
+                name="ask"
                 options={{
-                    title: 'Profile',
+                    title: 'Ask',
                     tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="person-outline" color={color} size={size} />
+                        <Ionicons name="chatbubble-ellipses-outline" size={size} color={color} />
+                    ),
+                }}
+            />
+            <Tabs.Screen
+                name="compare"
+                options={{
+                    title: 'Compare',
+                    tabBarIcon: ({ color, size }) => (
+                        <Ionicons name="git-compare-outline" size={size} color={color} />
                     ),
                 }}
             />
