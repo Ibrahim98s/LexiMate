@@ -1,7 +1,10 @@
 import axios from 'axios';
+import * as SecureStore from 'expo-secure-store';
 
 // TODO: replace with real backend URL once Spring Boot + Neon is deployed (Week 2)
 const BASE_URL = 'https://shortlist-epidermal-segment.ngrok-free.dev/api';
+
+const TOKEN_KEY = 'leximate_auth_token';
 
 export const api = axios.create({
     baseURL: BASE_URL,
@@ -11,15 +14,23 @@ export const api = axios.create({
     },
 });
 
-api.interceptors.request.use((config) => {
-    // TODO: attach Firebase auth token here once auth is wired up
+api.interceptors.request.use(async (config) => {
+    const token = await SecureStore.getItemAsync(TOKEN_KEY);
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
 });
 
 api.interceptors.response.use(
     (response) => response,
-    (error) => {
+    async (error) => {
         console.log('API Error:', error?.response?.data || error.message);
+
+        if (error?.response?.status === 401) {
+            await SecureStore.deleteItemAsync(TOKEN_KEY);
+        }
+
         return Promise.reject(error);
     }
 );

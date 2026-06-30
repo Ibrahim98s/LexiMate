@@ -3,13 +3,17 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
+import { useAuthStore } from '../../store/authStore';
 
 export default function LoginScreen() {
     const router = useRouter();
+    const login = useAuthStore((state) => state.login);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
+    const [formError, setFormError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     function validate() {
         let valid = true;
@@ -37,10 +41,20 @@ export default function LoginScreen() {
         return valid;
     }
 
-    function handleSignIn() {
+    async function handleSignIn() {
+        setFormError('');
         if (!validate()) return;
-        // Temporary — will be replaced with real Firebase auth later
-        router.replace('/(tabs)');
+
+        setIsSubmitting(true);
+        try {
+            await login(email.trim(), password);
+            router.replace('/(tabs)');
+        } catch (error: any) {
+            const message = error?.response?.data?.error || 'Unable to sign in. Please try again.';
+            setFormError(message);
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
     return (
@@ -65,7 +79,9 @@ export default function LoginScreen() {
                 error={passwordError}
             />
 
-            <Button label="Sign In" onPress={handleSignIn} />
+            {formError ? <Text style={styles.formError}>{formError}</Text> : null}
+
+            <Button label="Sign In" onPress={handleSignIn} loading={isSubmitting} />
 
             <Text style={styles.footer}>
                 Don't have an account?{' '}
@@ -94,6 +110,12 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: '#8A9BBF',
         marginBottom: 32,
+    },
+    formError: {
+        color: '#FF6B6B',
+        fontSize: 14,
+        marginBottom: 16,
+        textAlign: 'center',
     },
     footer: {
         color: '#8A9BBF',

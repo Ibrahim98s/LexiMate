@@ -37,3 +37,11 @@ export async function getDocumentHistory(): Promise<DocumentAnalysisResult[]> {
     const response = await api.get('/documents/history');
     return response.data;
 }
+
+export async function askQuestion(
+    documentId: number,
+    question: string
+): Promise<string> {
+    const response = await api.post(`/documents/${documentId}/ask`, { question });
+    return response.data.answer;
+}

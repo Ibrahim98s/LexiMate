@@ -1,6 +1,8 @@
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useAuthStore } from '../store/authStore';
 
 type SettingItem = {
     id: string;
@@ -16,15 +18,29 @@ const settings: SettingItem[] = [
 ];
 
 export default function ProfileScreen() {
+    const router = useRouter();
+    const logout = useAuthStore((state) => state.logout);
+    const userName = useAuthStore((state) => state.userName);
+    const userEmail = useAuthStore((state) => state.userEmail);
+
+    const initials = userName
+        ? userName.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
+        : '?';
+
+    async function handleLogout() {
+        await logout();
+        router.replace('/(auth)/login');
+    }
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.profileHeader}>
                     <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>IS</Text>
+                        <Text style={styles.avatarText}>{initials}</Text>
                     </View>
-                    <Text style={styles.name}>Ismaila Saha</Text>
-                    <Text style={styles.email}>ismaila@example.com</Text>
+                    <Text style={styles.name}>{userName || 'Account'}</Text>
+                    <Text style={styles.email}>{userEmail || ''}</Text>
                 </View>
 
                 <View style={styles.settingsGroup}>
@@ -37,7 +53,7 @@ export default function ProfileScreen() {
                     ))}
                 </View>
 
-                <TouchableOpacity style={styles.logoutButton}>
+                <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                     <Ionicons name="log-out-outline" size={20} color="#EF4444" />
                     <Text style={styles.logoutText}>Log Out</Text>
                 </TouchableOpacity>
