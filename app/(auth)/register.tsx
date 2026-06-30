@@ -3,15 +3,19 @@ import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
+import { useAuthStore } from '../../store/authStore';
 
 export default function RegisterScreen() {
     const router = useRouter();
+    const register = useAuthStore((state) => state.register);
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [nameError, setNameError] = useState('');
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
+    const [formError, setFormError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     function validate() {
         let valid = true;
@@ -46,10 +50,20 @@ export default function RegisterScreen() {
         return valid;
     }
 
-    function handleCreateAccount() {
+    async function handleCreateAccount() {
+        setFormError('');
         if (!validate()) return;
-        // Temporary — will be replaced with real Firebase auth later
-        router.replace('/(tabs)');
+
+        setIsSubmitting(true);
+        try {
+            await register(fullName.trim(), email.trim(), password);
+            router.replace('/(tabs)');
+        } catch (error: any) {
+            const message = error?.response?.data?.error || 'Unable to create account. Please try again.';
+            setFormError(message);
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
     return (
@@ -75,13 +89,15 @@ export default function RegisterScreen() {
 
             <Input
                 placeholder="Password"
-                secureTextEntry
+                isPassword
                 value={password}
                 onChangeText={setPassword}
                 error={passwordError}
             />
 
-            <Button label="Create Account" onPress={handleCreateAccount} />
+            {formError ? <Text style={styles.formError}>{formError}</Text> : null}
+
+            <Button label="Create Account" onPress={handleCreateAccount} loading={isSubmitting} />
 
             <Text style={styles.footer}>
                 Already have an account?{' '}
@@ -110,6 +126,12 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: '#8A9BBF',
         marginBottom: 32,
+    },
+    formError: {
+        color: '#FF6B6B',
+        fontSize: 14,
+        marginBottom: 16,
+        textAlign: 'center',
     },
     footer: {
         color: '#8A9BBF',

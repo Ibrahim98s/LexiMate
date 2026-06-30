@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     Text,
@@ -8,9 +8,12 @@ import {
     StyleSheet,
     KeyboardAvoidingView,
     Platform,
+    ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as documentService from '../../services/documentService';
+import type { DocumentAnalysisResult } from '../../services/documentService';
 
 type Message = {
     id: string;
@@ -18,76 +21,178 @@ type Message = {
     text: string;
 };
 
-const INITIAL_MESSAGES: Message[] = [
-    {
-        id: '1',
+function greetingFor(doc: DocumentAnalysisResult): Message {
+    return {
+        id: 'greeting',
         role: 'assistant',
-        text: "Hi! Scan a document, then ask me anything about it — clauses, risks, or what specific terms mean.",
-    },
-];
+        text: `Ask anything about "${doc.title}" — deadlines, clauses, or words you don't understand.`,
+    };
+}
 
 export default function AskScreen() {
-    const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+    const [documents, setDocuments] = useState<DocumentAnalysisResult[]>([]);
+    const [loadingDocs, setLoadingDocs] = useState(true);
+    const [selectedDoc, setSelectedDoc] = useState<DocumentAnalysisResult | null>(null);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
+    const [isAsking, setIsAsking] = useState(false);
     const listRef = useRef<FlatList>(null);
 
-    const sendMessage = () => {
-        if (!input.trim()) return;
+    useEffect(() => {
+        (async () => {
+            try {
+                const history = await documentService.getDocumentHistory();
+                setDocuments(history);
+            } catch (e) {
+                console.log('Failed to load document history:', e);
+            } finally {
+                setLoadingDocs(false);
+            }
+        })();
+    }, []);
 
+    const selectDocument = (doc: DocumentAnalysisResult) => {
+        setSelectedDoc(doc);
+        setMessages([greetingFor(doc)]);
+    };
+
+    const sendMessage = async () => {
+        if (!input.trim() || !selectedDoc || isAsking) return;
+
+        const questionText = input.trim();
         const userMsg: Message = {
             id: Date.now().toString(),
             role: 'user',
-            text: input.trim(),
+            text: questionText,
         };
 
         setMessages((prev) => [...prev, userMsg]);
         setInput('');
+        setIsAsking(true);
 
-        // Placeholder response — will call Claude API via backend later
-        setTimeout(() => {
+        try {
+            const answer = await documentService.askQuestion(selectedDoc.id, questionText);
             const reply: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                text: "I'll be able to answer that once I'm connected to a real document and the backend. For now this is just a UI preview.",
+                text: answer,
             };
             setMessages((prev) => [...prev, reply]);
-        }, 800);
+        } catch (e: any) {
+            const errorText =
+                e?.response?.data?.error ||
+                "Something went wrong getting an answer. Please try again.";
+            const reply: Message = {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                text: errorText,
+            };
+            setMessages((prev) => [...prev, reply]);
+        } finally {
+            setIsAsking(false);
+        }
     };
 
     return (
         <LinearGradient colors={['#0A1628', '#0F1F3A']} style={styles.container}>
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'android' ? 80 : 0}
             >
-                <FlatList
-                    ref={listRef}
-                    data={messages}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.listContent}
-                    onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
-                    renderItem={({ item }) => (
-                        <View
-                            style={[
-                                styles.bubble,
-                                item.role === 'user' ? styles.userBubble : styles.assistantBubble,
-                            ]}
-                        >
-                            <Text style={styles.bubbleText}>{item.text}</Text>
-                        </View>
+                {/* Document picker */}
+                <View style={styles.pickerSection}>
+                    {loadingDocs ? (
+                        <ActivityIndicator color="#2DD4BF" style={{ paddingVertical: 12 }} />
+                    ) : documents.length === 0 ? (
+                        <Text style={styles.noDocsText}>
+                            Scan a document first to start asking questions.
+                        </Text>
+                    ) : (
+                        <FlatList
+                            data={documents}
+                            keyExtractor={(item) => item.id.toString()}
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.pickerList}
+                            renderItem={({ item }) => {
+                                const isSelected = selectedDoc?.id === item.id;
+                                return (
+                                    <TouchableOpacity
+                                        style={[styles.docChip, isSelected && styles.docChipSelected]}
+                                        onPress={() => selectDocument(item)}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.docChipText,
+                                                isSelected && styles.docChipTextSelected,
+                                            ]}
+                                            numberOfLines={1}
+                                        >
+                                            {item.title}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
                     )}
-                />
+                </View>
+
+                {/* Chat */}
+                {!selectedDoc ? (
+                    <View style={styles.emptyState}>
+                        <Ionicons name="chatbubble-ellipses-outline" size={40} color="#4A5A7A" />
+                        <Text style={styles.emptyStateText}>
+                            Select a document above to start asking questions
+                        </Text>
+                    </View>
+                ) : (
+                    <FlatList
+                        ref={listRef}
+                        data={messages}
+                        keyExtractor={(item) => item.id}
+                        contentContainerStyle={styles.listContent}
+                        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+                        renderItem={({ item }) => (
+                            <View
+                                style={[
+                                    styles.bubble,
+                                    item.role === 'user' ? styles.userBubble : styles.assistantBubble,
+                                ]}
+                            >
+                                <Text style={styles.bubbleText}>{item.text}</Text>
+                            </View>
+                        )}
+                        ListFooterComponent={
+                            isAsking ? (
+                                <View style={[styles.bubble, styles.assistantBubble]}>
+                                    <ActivityIndicator color="#8A9BBF" size="small" />
+                                </View>
+                            ) : null
+                        }
+                    />
+                )}
 
                 <View style={styles.inputRow}>
                     <TextInput
-                        style={styles.input}
-                        placeholder="Ask about this document..."
+                        style={[styles.input, !selectedDoc && styles.inputDisabled]}
+                        placeholder={
+                            selectedDoc ? 'Ask about this document...' : 'Select a document first...'
+                        }
                         placeholderTextColor="#4A5A7A"
                         value={input}
                         onChangeText={setInput}
                         onSubmitEditing={sendMessage}
+                        editable={!!selectedDoc && !isAsking}
                     />
-                    <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+                    <TouchableOpacity
+                        style={[
+                            styles.sendButton,
+                            (!selectedDoc || isAsking) && styles.sendButtonDisabled,
+                        ]}
+                        onPress={sendMessage}
+                        disabled={!selectedDoc || isAsking}
+                    >
                         <Ionicons name="send" size={20} color="#F0F4FF" />
                     </TouchableOpacity>
                 </View>
@@ -98,6 +203,55 @@ export default function AskScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
+    pickerSection: {
+        borderBottomColor: '#2A4470',
+        borderBottomWidth: 1,
+        paddingVertical: 10,
+    },
+    pickerList: {
+        paddingHorizontal: 16,
+        gap: 8,
+    },
+    noDocsText: {
+        color: '#8A9BBF',
+        fontSize: 13,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+    },
+    docChip: {
+        backgroundColor: '#132240',
+        borderColor: '#2A4470',
+        borderWidth: 1,
+        borderRadius: 16,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        marginRight: 8,
+        maxWidth: 160,
+    },
+    docChipSelected: {
+        backgroundColor: '#1B4FD8',
+        borderColor: '#1B4FD8',
+    },
+    docChipText: {
+        color: '#8A9BBF',
+        fontSize: 13,
+    },
+    docChipTextSelected: {
+        color: '#F0F4FF',
+        fontWeight: '600',
+    },
+    emptyState: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 40,
+        gap: 12,
+    },
+    emptyStateText: {
+        color: '#8A9BBF',
+        fontSize: 14,
+        textAlign: 'center',
+    },
     listContent: { padding: 16, paddingTop: 24 },
     bubble: {
         maxWidth: '80%',
@@ -140,6 +294,9 @@ const styles = StyleSheet.create({
         color: '#F0F4FF',
         marginRight: 10,
     },
+    inputDisabled: {
+        opacity: 0.5,
+    },
     sendButton: {
         backgroundColor: '#1B4FD8',
         borderRadius: 20,
@@ -147,5 +304,8 @@ const styles = StyleSheet.create({
         height: 40,
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    sendButtonDisabled: {
+        opacity: 0.4,
     },
 });

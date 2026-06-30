@@ -36,7 +36,7 @@ export default function ScanScreen() {
         setIsUploading(true);
 
         try {
-            const photo = await cameraRef.current.takePictureAsync();
+            const photo = await cameraRef.current.takePictureAsync({ quality: 0.4 });
             if (!photo?.uri) throw new Error('No photo captured');
 
             const result = await uploadDocument(photo.uri, selectedLanguage);

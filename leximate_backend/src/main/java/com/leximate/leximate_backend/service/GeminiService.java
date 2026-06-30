@@ -76,4 +76,47 @@ public class GeminiService {
             throw new RuntimeException("Failed to parse Gemini response: " + responseJson, e);
         }
     }
+
+    public String askQuestion(String documentText, String question) {
+        String prompt = """
+                You are a helpful assistant answering questions about a legal document. Here is the full text of the document:
+
+                ---
+                %s
+                ---
+
+                Answer the following question about this document, clearly and concisely, in plain language. If the answer isn't found in the document, say so honestly rather than guessing.
+
+                Question: %s
+                """.formatted(documentText, question);
+
+        Map<String, Object> requestBody = Map.of(
+                "contents", new Object[]{
+                        Map.of("parts", new Object[]{
+                                Map.of("text", prompt)
+                        })
+                }
+        );
+
+        String responseJson = webClient.post()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/models/gemini-2.5-flash:generateContent")
+                        .queryParam("key", apiKey)
+                        .build())
+                .bodyValue(requestBody)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+
+        try {
+            JsonNode root = objectMapper.readTree(responseJson);
+            return root
+                    .path("candidates").get(0)
+                    .path("content").path("parts").get(0)
+                    .path("text").asText()
+                    .trim();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse Gemini response: " + responseJson, e);
+        }
+    }
 }

@@ -2,15 +2,20 @@ package com.leximate.leximate_backend.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.leximate.leximate_backend.model.Document;
+import com.leximate.leximate_backend.model.User;
 import com.leximate.leximate_backend.repository.DocumentRepository;
+import com.leximate.leximate_backend.repository.UserRepository;
 import com.leximate.leximate_backend.service.GeminiService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -21,7 +26,17 @@ public class DocumentController {
     private DocumentRepository documentRepository;
 
     @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private GeminiService geminiService;
+
+    private Long getCurrentUserId(Authentication authentication) {
+        String email = authentication.getName();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return user.getId();
+    }
 
     @GetMapping
     public List<Document> getAllDocuments() {
@@ -29,15 +44,21 @@ public class DocumentController {
     }
 
     @GetMapping("/history")
-    public List<Document> getDocumentHistory() {
-        return documentRepository.findAll();
+    public List<Document> getDocumentHistory(Authentication authentication) {
+        Long userId = getCurrentUserId(authentication);
+        return documentRepository.findByUserId(userId);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Document> getDocumentById(@PathVariable Long id) {
+    public ResponseEntity<Document> getDocumentById(@PathVariable Long id, Authentication authentication) {
+        Long userId = getCurrentUserId(authentication);
         Optional<Document> document = documentRepository.findById(id);
-        return document.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+
+        if (document.isEmpty() || !document.get().getUserId().equals(userId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(document.get());
     }
 
     @PostMapping
@@ -48,13 +69,17 @@ public class DocumentController {
     @PostMapping("/analyze")
     public ResponseEntity<Document> analyzeDocument(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("targetLanguage") String targetLanguage
+            @RequestParam("targetLanguage") String targetLanguage,
+            Authentication authentication
     ) {
         try {
+            Long userId = getCurrentUserId(authentication);
+
             byte[] imageBytes = file.getBytes();
             JsonNode result = geminiService.analyzeDocumentImage(imageBytes, targetLanguage);
 
             Document document = new Document();
+            document.setUserId(userId);
             document.setTitle(result.path("title").asText("Scanned Document"));
             document.setOriginalLanguage(result.path("originalLanguage").asText("unknown"));
             document.setTargetLanguage(targetLanguage);
@@ -73,17 +98,54 @@ public class DocumentController {
             return ResponseEntity.ok(saved);
 
         } catch (Exception e) {
-                    e.printStackTrace();
-                    return ResponseEntity.internalServerError().build();
-                }
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/{id}/ask")
+    public ResponseEntity<?> askAboutDocument(
+            @PathVariable Long id,
+            @RequestBody AskRequest request,
+            Authentication authentication
+    ) {
+        Long userId = getCurrentUserId(authentication);
+        Optional<Document> documentOpt = documentRepository.findById(id);
+
+        if (documentOpt.isEmpty() || !documentOpt.get().getUserId().equals(userId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        try {
+            Document document = documentOpt.get();
+            String documentText = document.getTranslation();
+
+            if (documentText == null || documentText.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "This document has no readable text to ask about"));
+            }
+
+            String answer = geminiService.askQuestion(documentText, request.question());
+            return ResponseEntity.ok(Map.of("answer", answer));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(Map.of("error", "Failed to get an answer"));
+        }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteDocument(@PathVariable Long id) {
-        if (!documentRepository.existsById(id)) {
+    public ResponseEntity<Void> deleteDocument(@PathVariable Long id, Authentication authentication) {
+        Long userId = getCurrentUserId(authentication);
+        Optional<Document> document = documentRepository.findById(id);
+
+        if (document.isEmpty() || !document.get().getUserId().equals(userId)) {
             return ResponseEntity.notFound().build();
         }
+
         documentRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    public record AskRequest(String question) {
     }
 }
