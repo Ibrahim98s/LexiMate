@@ -1,31 +1,47 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Animated, ActivityIndicator } from 'react-native';
+import {
+    StyleSheet, Text, View, TouchableOpacity,
+    ScrollView, Animated, ActivityIndicator
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getDocumentHistory, DocumentAnalysisResult } from '../../services/documentService';
+import { useAuthStore } from '../../store/authStore';
 
 const riskColor = (level: string | null) => {
     switch (level) {
-        case 'low':
-            return '#22C55E';
-        case 'medium':
-            return '#F59E0B';
-        case 'high':
-            return '#EF4444';
-        default:
-            return '#4A5A7A';
+        case 'low': return '#22C55E';
+        case 'medium': return '#F59E0B';
+        case 'high': return '#EF4444';
+        default: return '#4A5A7A';
+    }
+};
+
+const riskBg = (level: string | null) => {
+    switch (level) {
+        case 'low': return 'rgba(34,197,94,0.12)';
+        case 'medium': return 'rgba(245,158,11,0.12)';
+        case 'high': return 'rgba(239,68,68,0.12)';
+        default: return 'rgba(74,90,122,0.12)';
     }
 };
 
 export default function HomeScreen() {
     const router = useRouter();
     const fadeAnim = useRef(new Animated.Value(0)).current;
-    const slideAnim = useRef(new Animated.Value(16)).current;
+    const slideAnim = useRef(new Animated.Value(24)).current;
+    const scanPulse = useRef(new Animated.Value(1)).current;
 
     const [documents, setDocuments] = useState<DocumentAnalysisResult[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    const userName = useAuthStore((state) => state.userName);
+    const isPremium = useAuthStore((state) => state.isPremium);
+    const scansUsed = useAuthStore((state) => state.scansUsed);
+    const scanLimit = useAuthStore((state) => state.scanLimit);
+    const firstName = userName ? userName.split(' ')[0] : null;
 
     const loadHistory = useCallback(async () => {
         try {
@@ -46,40 +62,123 @@ export default function HomeScreen() {
 
     useEffect(() => {
         Animated.parallel([
-            Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-            Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
+            Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+            Animated.timing(slideAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
         ]).start();
+
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(scanPulse, { toValue: 1.03, duration: 1000, useNativeDriver: true }),
+                Animated.timing(scanPulse, { toValue: 1, duration: 1000, useNativeDriver: true }),
+            ])
+        ).start();
     }, []);
 
     const recentDocs = documents.slice(0, 3);
     const highRiskCount = documents.filter((d) => d.riskLevel === 'high').length;
     const languageCount = new Set(documents.map((d) => d.targetLanguage)).size;
+    const scansRemaining = Math.max(scanLimit - scansUsed, 0);
 
     return (
         <LinearGradient colors={['#0A1628', '#0F1F3A']} style={styles.gradient}>
+
+            <View pointerEvents="none" style={styles.orbTopRight} />
+            <View pointerEvents="none" style={styles.orbBottomLeft} />
+
+            <LinearGradient
+                pointerEvents="none"
+                colors={['rgba(0,0,0,0.28)', 'rgba(0,0,0,0)']}
+                style={styles.topVignette}
+            />
+
             <SafeAreaView style={styles.gradient} edges={['top']}>
-                <ScrollView contentContainerStyle={styles.content}>
-                    <Text style={styles.greeting}>Welcome back 👋</Text>
-                    <Text style={styles.subtitle}>Let's make sense of your documents</Text>
+                <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-                    <TouchableOpacity style={styles.scanButton} onPress={() => router.push('/scan')}>
-                        <Ionicons name="camera-outline" size={22} color="#FFFFFF" />
-                        <Text style={styles.scanButtonText}>Scan New Document</Text>
-                    </TouchableOpacity>
+                    <View style={styles.header}>
+                        <View>
+                            <Text style={styles.greeting}>
+                                {firstName ? `Hello, ${firstName} 👋` : 'Welcome back 👋'}
+                            </Text>
+                            <Text style={styles.subtitle}>Your legal documents, simplified</Text>
+                        </View>
+                        {isPremium && (
+                            <View style={styles.premiumChip}>
+                                <Ionicons name="star" size={12} color="#F59E0B" />
+                                <Text style={styles.premiumChipText}>PRO</Text>
+                            </View>
+                        )}
+                    </View>
 
-                    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+                    <Animated.View style={{ transform: [{ scale: scanPulse }], marginBottom: !isPremium ? 8 : 28 }}>
+                        <View style={styles.scanGlowOuter} pointerEvents="none" />
+                        <View style={styles.scanGlowInner} pointerEvents="none" />
+                        <TouchableOpacity
+                            style={styles.scanButton}
+                            onPress={() => router.push('/scan')}
+                            activeOpacity={0.85}
+                        >
+                            <LinearGradient
+                                colors={['#1B4FD8', '#2DD4BF']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.scanButtonGradient}
+                            >
+                                <View style={styles.scanIconCircle}>
+                                    <Ionicons name="camera" size={22} color="#1B4FD8" />
+                                </View>
+                                <View>
+                                    <Text style={styles.scanButtonTitle}>Scan Document</Text>
+                                    <Text style={styles.scanButtonSub}>Tap to analyze a legal document</Text>
+                                </View>
+                                <Ionicons name="arrow-forward" size={20} color="rgba(255,255,255,0.7)" style={{ marginLeft: 'auto' }} />
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </Animated.View>
+
+                    {!isPremium && (
+                        <TouchableOpacity
+                            style={styles.scansLeftRow}
+                            onPress={() => router.push('/profile')}
+                            activeOpacity={0.7}
+                        >
+                            <Ionicons
+                                name={scansRemaining === 0 ? 'lock-closed' : 'flash-outline'}
+                                size={13}
+                                color={scansRemaining === 0 ? '#EF4444' : '#8A9BBF'}
+                            />
+                            <Text style={[styles.scansLeftText, scansRemaining === 0 && { color: '#EF4444' }]}>
+                                {scansRemaining === 0
+                                    ? "You're out of free scans this month · Upgrade"
+                                    : `${scansRemaining} free scan${scansRemaining === 1 ? '' : 's'} left this month · Upgrade`}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
+
+                    <Animated.View style={{
+                        opacity: fadeAnim,
+                        transform: [{ translateY: slideAnim }]
+                    }}>
                         <View style={styles.statsRow}>
                             <View style={styles.statCard}>
+                                <View style={[styles.statIconCircle, { backgroundColor: 'rgba(27,79,216,0.15)' }]}>
+                                    <Ionicons name="document-text-outline" size={18} color="#1B4FD8" />
+                                </View>
                                 <Text style={styles.statValue}>{documents.length}</Text>
                                 <Text style={styles.statLabel}>Scanned</Text>
                             </View>
-                            <View style={[styles.statCard, styles.statCardAccent]}>
-                                <Text style={[styles.statValue, { color: '#EF4444' }]}>
+                            <View style={[styles.statCard, { borderColor: highRiskCount > 0 ? 'rgba(239,68,68,0.3)' : '#2A4470' }]}>
+                                <View style={[styles.statIconCircle, { backgroundColor: 'rgba(239,68,68,0.15)' }]}>
+                                    <Ionicons name="warning-outline" size={18} color="#EF4444" />
+                                </View>
+                                <Text style={[styles.statValue, highRiskCount > 0 && { color: '#EF4444' }]}>
                                     {highRiskCount}
                                 </Text>
                                 <Text style={styles.statLabel}>High Risk</Text>
                             </View>
                             <View style={styles.statCard}>
+                                <View style={[styles.statIconCircle, { backgroundColor: 'rgba(45,212,191,0.15)' }]}>
+                                    <Ionicons name="language-outline" size={18} color="#2DD4BF" />
+                                </View>
                                 <Text style={styles.statValue}>{languageCount}</Text>
                                 <Text style={styles.statLabel}>Languages</Text>
                             </View>
@@ -88,26 +187,40 @@ export default function HomeScreen() {
                         <View style={styles.sectionHeader}>
                             <Text style={styles.sectionTitle}>Recent Documents</Text>
                             <TouchableOpacity onPress={() => router.push('/(tabs)/history')}>
-                                <Text style={styles.sectionLink}>See all</Text>
+                                <Text style={styles.sectionLink}>See all →</Text>
                             </TouchableOpacity>
                         </View>
 
                         {isLoading ? (
-                            <ActivityIndicator size="small" color="#1B4FD8" style={{ marginTop: 12 }} />
+                            <ActivityIndicator size="small" color="#2DD4BF" style={{ marginTop: 20 }} />
                         ) : recentDocs.length === 0 ? (
-                            <Text style={styles.emptyText}>No documents scanned yet</Text>
+                            <View style={styles.emptyState}>
+                                <View style={styles.emptyIconCircle}>
+                                    <Ionicons name="document-outline" size={28} color="#4A5A7A" />
+                                </View>
+                                <Text style={styles.emptyTitle}>No documents yet</Text>
+                                <Text style={styles.emptyText}>
+                                    Scan your first legal document to get started
+                                </Text>
+                            </View>
                         ) : (
                             recentDocs.map((doc) => (
                                 <TouchableOpacity
                                     key={doc.id}
                                     style={styles.docCard}
                                     onPress={() => router.push({ pathname: '/results', params: { documentId: doc.id.toString() } })}
+                                    activeOpacity={0.75}
                                 >
-                                    <View style={[styles.riskDot, { backgroundColor: riskColor(doc.riskLevel) }]} />
+                                    <View style={[styles.riskPill, { backgroundColor: riskBg(doc.riskLevel) }]}>
+                                        <Text style={[styles.riskPillText, { color: riskColor(doc.riskLevel) }]}>
+                                            {doc.riskLevel ? doc.riskLevel.toUpperCase() : '—'}
+                                        </Text>
+                                    </View>
                                     <View style={styles.docInfo}>
-                                        <Text style={styles.docTitle}>{doc.title}</Text>
-                                        <Text style={styles.docDate}>
+                                        <Text style={styles.docTitle} numberOfLines={1}>{doc.title}</Text>
+                                        <Text style={styles.docMeta}>
                                             {new Date(doc.createdAt).toLocaleDateString()}
+                                            {doc.riskScore != null ? ` · Risk ${doc.riskScore}/100` : ''}
                                         </Text>
                                     </View>
                                     <Ionicons name="chevron-forward" size={18} color="#4A5A7A" />
@@ -123,32 +236,135 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
     gradient: { flex: 1 },
-    content: { padding: 24, paddingBottom: 40 },
+    content: { padding: 24, paddingBottom: 48 },
+
+    orbTopRight: {
+        position: 'absolute',
+        top: -80,
+        right: -60,
+        width: 260,
+        height: 260,
+        borderRadius: 130,
+        backgroundColor: '#2DD4BF',
+        opacity: 0.10,
+    },
+    orbBottomLeft: {
+        position: 'absolute',
+        bottom: 40,
+        left: -100,
+        width: 280,
+        height: 280,
+        borderRadius: 140,
+        backgroundColor: '#1B4FD8',
+        opacity: 0.12,
+    },
+    topVignette: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 160,
+    },
+
+    header: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        marginBottom: 24,
+    },
     greeting: {
-        fontSize: 26,
+        fontSize: 24,
         fontWeight: '800',
         color: '#F0F4FF',
     },
     subtitle: {
-        fontSize: 15,
+        fontSize: 14,
         color: '#8A9BBF',
+        marginTop: 3,
+    },
+    premiumChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: 'rgba(245,158,11,0.12)',
+        borderColor: 'rgba(245,158,11,0.3)',
+        borderWidth: 1,
+        borderRadius: 20,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
         marginTop: 4,
-        marginBottom: 24,
+    },
+    premiumChipText: {
+        color: '#F59E0B',
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+    },
+
+    scanGlowOuter: {
+        position: 'absolute',
+        top: -20,
+        left: '15%',
+        right: '15%',
+        height: 90,
+        borderRadius: 45,
+        backgroundColor: '#2DD4BF',
+        opacity: 0.14,
+    },
+    scanGlowInner: {
+        position: 'absolute',
+        top: -6,
+        left: '25%',
+        right: '25%',
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: '#1B4FD8',
+        opacity: 0.16,
     },
     scanButton: {
-        backgroundColor: '#1B4FD8',
-        borderRadius: 12,
+        borderRadius: 16,
+        overflow: 'hidden',
+        shadowColor: '#1B4FD8',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.45,
+        shadowRadius: 16,
+        elevation: 10,
+    },
+    scanButtonGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
         padding: 16,
+        gap: 14,
+    },
+    scanIconCircle: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#FFFFFF',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    scanButtonTitle: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    scanButtonSub: {
+        color: 'rgba(255,255,255,0.7)',
+        fontSize: 12,
+        marginTop: 2,
+    },
+    scansLeftRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 8,
-        marginBottom: 28,
+        gap: 6,
+        marginBottom: 20,
     },
-    scanButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
+    scansLeftText: {
+        color: '#8A9BBF',
+        fontSize: 12,
+        fontWeight: '500',
     },
     statsRow: {
         flexDirection: 'row',
@@ -160,12 +376,23 @@ const styles = StyleSheet.create({
         backgroundColor: '#132240',
         borderColor: '#2A4470',
         borderWidth: 1,
-        borderRadius: 12,
-        paddingVertical: 14,
+        borderRadius: 14,
+        paddingVertical: 16,
         alignItems: 'center',
+        gap: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+        elevation: 4,
     },
-    statCardAccent: {
-        borderColor: '#EF4444',
+    statIconCircle: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 2,
     },
     statValue: {
         color: '#F0F4FF',
@@ -174,8 +401,7 @@ const styles = StyleSheet.create({
     },
     statLabel: {
         color: '#8A9BBF',
-        fontSize: 12,
-        marginTop: 2,
+        fontSize: 11,
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -193,12 +419,32 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '600',
     },
+    emptyState: {
+        alignItems: 'center',
+        paddingVertical: 32,
+        gap: 8,
+    },
+    emptyIconCircle: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: '#132240',
+        borderColor: '#2A4470',
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 4,
+    },
+    emptyTitle: {
+        color: '#F0F4FF',
+        fontSize: 15,
+        fontWeight: '600',
+    },
     emptyText: {
         color: '#8A9BBF',
-        fontSize: 14,
+        fontSize: 13,
         textAlign: 'center',
-        marginTop: 12,
-        marginBottom: 12,
+        maxWidth: 220,
     },
     docCard: {
         flexDirection: 'row',
@@ -206,15 +452,27 @@ const styles = StyleSheet.create({
         backgroundColor: '#132240',
         borderColor: '#2A4470',
         borderWidth: 1,
-        borderRadius: 12,
+        borderRadius: 14,
         padding: 14,
         marginBottom: 10,
         gap: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
+        elevation: 3,
     },
-    riskDot: {
-        width: 10,
-        height: 10,
-        borderRadius: 5,
+    riskPill: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+        minWidth: 52,
+        alignItems: 'center',
+    },
+    riskPillText: {
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 0.5,
     },
     docInfo: {
         flex: 1,
@@ -224,7 +482,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
     },
-    docDate: {
+    docMeta: {
         color: '#8A9BBF',
         fontSize: 12,
         marginTop: 2,

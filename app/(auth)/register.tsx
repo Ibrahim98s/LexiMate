@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import {
+    StyleSheet, Text, View, TouchableOpacity,
+    KeyboardAvoidingView, Platform, ScrollView
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import { useAuthStore } from '../../store/authStore';
@@ -57,7 +63,7 @@ export default function RegisterScreen() {
         setIsSubmitting(true);
         try {
             await register(fullName.trim(), email.trim(), password);
-            router.replace('/(tabs)');
+            router.replace({ pathname: '/(auth)/verify-email', params: { email: email.trim() } });
         } catch (error: any) {
             const message = error?.response?.data?.error || 'Unable to create account. Please try again.';
             setFormError(message);
@@ -67,80 +73,157 @@ export default function RegisterScreen() {
     }
 
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Create account</Text>
-            <Text style={styles.subtitle}>Get started with LexiMate</Text>
+        <LinearGradient colors={['#0A1628', '#0F1F3A']} style={styles.container}>
+            <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+                <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                >
+                    <ScrollView
+                        contentContainerStyle={styles.scrollContent}
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
+                    >
+                        <View style={styles.brandSection}>
+                            <View style={styles.logoCircle}>
+                                <Ionicons name="document-text" size={32} color="#2DD4BF" />
+                            </View>
+                            <Text style={styles.brandName}>LexiMate</Text>
+                            <Text style={styles.brandTagline}>Legal documents, simplified</Text>
+                        </View>
 
-            <Input
-                placeholder="Full Name"
-                value={fullName}
-                onChangeText={setFullName}
-                error={nameError}
-            />
+                        <View style={styles.formSection}>
+                            <Text style={styles.title}>Create account</Text>
+                            <Text style={styles.subtitle}>Get started for free</Text>
 
-            <Input
-                placeholder="Email"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-                error={emailError}
-            />
+                            <Input
+                                placeholder="Full Name"
+                                value={fullName}
+                                onChangeText={setFullName}
+                                error={nameError}
+                            />
 
-            <Input
-                placeholder="Password"
-                isPassword
-                value={password}
-                onChangeText={setPassword}
-                error={passwordError}
-            />
+                            <Input
+                                placeholder="Email address"
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                value={email}
+                                onChangeText={setEmail}
+                                error={emailError}
+                            />
 
-            {formError ? <Text style={styles.formError}>{formError}</Text> : null}
+                            <Input
+                                placeholder="Password"
+                                isPassword
+                                value={password}
+                                onChangeText={setPassword}
+                                error={passwordError}
+                            />
 
-            <Button label="Create Account" onPress={handleCreateAccount} loading={isSubmitting} />
+                            {formError ? (
+                                <View style={styles.formErrorContainer}>
+                                    <Ionicons name="alert-circle-outline" size={15} color="#EF4444" />
+                                    <Text style={styles.formError}>{formError}</Text>
+                                </View>
+                            ) : null}
 
-            <Text style={styles.footer}>
-                Already have an account?{' '}
-                <Text style={styles.link} onPress={() => router.push('/(auth)/login')}>
-                    Sign In
-                </Text>
-            </Text>
-        </View>
+                            <Button
+                                label="Create Account"
+                                onPress={handleCreateAccount}
+                                loading={isSubmitting}
+                            />
+
+                            <TouchableOpacity
+                                style={styles.loginRow}
+                                onPress={() => router.push('/(auth)/login')}
+                            >
+                                <Text style={styles.footer}>Already have an account? </Text>
+                                <Text style={styles.link}>Sign In</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
+            </SafeAreaView>
+        </LinearGradient>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#0A1628',
+    container: { flex: 1 },
+    scrollContent: {
+        flexGrow: 1,
         padding: 24,
         justifyContent: 'center',
     },
+    brandSection: {
+        alignItems: 'center',
+        marginBottom: 40,
+    },
+    logoCircle: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: '#132240',
+        borderColor: '#2DD4BF',
+        borderWidth: 1.5,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+    },
+    brandName: {
+        color: '#F0F4FF',
+        fontSize: 28,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+    },
+    brandTagline: {
+        color: '#8A9BBF',
+        fontSize: 13,
+        marginTop: 4,
+    },
+    formSection: {
+        width: '100%',
+    },
     title: {
-        fontSize: 30,
+        fontSize: 24,
         fontWeight: '800',
         color: '#F0F4FF',
-        marginBottom: 8,
+        marginBottom: 4,
     },
     subtitle: {
-        fontSize: 15,
+        fontSize: 14,
         color: '#8A9BBF',
-        marginBottom: 32,
+        marginBottom: 28,
+    },
+    formErrorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: 'rgba(239,68,68,0.08)',
+        borderColor: 'rgba(239,68,68,0.3)',
+        borderWidth: 1,
+        borderRadius: 10,
+        padding: 10,
+        marginBottom: 16,
     },
     formError: {
-        color: '#FF6B6B',
-        fontSize: 14,
-        marginBottom: 16,
-        textAlign: 'center',
+        color: '#EF4444',
+        fontSize: 13,
+        flex: 1,
+    },
+    loginRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 20,
     },
     footer: {
         color: '#8A9BBF',
-        textAlign: 'center',
-        marginTop: 24,
         fontSize: 14,
     },
     link: {
-        color: '#1B4FD8',
-        fontWeight: '600',
+        color: '#2DD4BF',
+        fontSize: 14,
+        fontWeight: '700',
     },
 });
