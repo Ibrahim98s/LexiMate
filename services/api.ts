@@ -1,8 +1,7 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-// TODO: replace with real backend URL once Spring Boot + Neon is deployed (Week 2)
-const BASE_URL = 'https://shortlist-epidermal-segment.ngrok-free.dev/api';
+const BASE_URL = 'https://leximate.onrender.com/api';
 
 const TOKEN_KEY = 'leximate_auth_token';
 
