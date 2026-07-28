@@ -39,7 +39,7 @@ public class GeminiService {
                   "flaggedPoints": ["short risky clause 1", "short risky clause 2"], or empty array if no document was detected
                 }
 
-                Set "documentDetected" to false whenever the image does not clearly contain a legal document with readable text. Do not guess or fabricate content in that case.
+                Set "documentDetected" to true if the image shows any readable document text — whether on paper, a screen, or another surface — even if lighting, glare, or angle make it imperfect, as long as you can make out most of the content. Only set "documentDetected" to false if the image is genuinely blank, completely dark, too blurry to read any text at all, or clearly not a document (e.g. a random object or empty background). Do not fabricate content for a document you cannot actually read.
                 """.formatted(targetLanguage, targetLanguage);
 
         Map<String, Object> requestBody = Map.of(
