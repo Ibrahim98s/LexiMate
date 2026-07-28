@@ -55,7 +55,7 @@ export default function ScanScreen() {
 
             const result = await uploadDocument(photo.uri, selectedLanguage);
             checkAuth(); // refresh scansUsed so home reflects the latest count
-            router.push({ pathname: '/results', params: { documentId: String(result.id) } });
+            router.replace({ pathname: '/results', params: { documentId: String(result.id) } });
         } catch (error: any) {
             console.log('Upload failed:', error);
 
@@ -167,8 +167,8 @@ export default function ScanScreen() {
     );
 }
 
-const CORNER_SIZE = 24;
-const CORNER_THICKNESS = 3;
+const CORNER_SIZE = 36;
+const CORNER_THICKNESS = 4;
 
 const styles = StyleSheet.create({
     container: {
@@ -264,10 +264,10 @@ const styles = StyleSheet.create({
     },
     frameGuide: {
         position: 'absolute',
-        top: '25%',
-        left: '8%',
-        right: '8%',
-        bottom: '25%',
+        top: '14%',
+        left: '6%',
+        right: '6%',
+        bottom: '24%',
     },
     corner: {
         position: 'absolute',

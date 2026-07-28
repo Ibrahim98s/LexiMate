@@ -4,11 +4,11 @@ import {
     StyleSheet, Text, View, TouchableOpacity,
     KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
+import ScreenBackground from '../../components/ScreenBackground';
 import { useAuthStore } from '../../store/authStore';
 
 export default function LoginScreen() {
@@ -64,7 +64,12 @@ export default function LoginScreen() {
     }
 
     return (
-        <LinearGradient colors={['#0A1628', '#0F1F3A']} style={styles.container}>
+        <ScreenBackground
+            orbs={[
+                { color: '#2DD4BF', size: 280, opacity: 0.15, top: -60, right: -80 },
+                { color: '#1B4FD8', size: 240, opacity: 0.12, bottom: -40, left: -60 },
+            ]}
+        >
             <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
                 <KeyboardAvoidingView
                     style={{ flex: 1 }}
@@ -126,12 +131,11 @@ export default function LoginScreen() {
                     </ScrollView>
                 </KeyboardAvoidingView>
             </SafeAreaView>
-        </LinearGradient>
+        </ScreenBackground>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1 },
     scrollContent: {
         flexGrow: 1,
         padding: 24,
@@ -151,6 +155,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 12,
+        shadowColor: '#2DD4BF',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: 4,
     },
     brandName: {
         color: '#F0F4FF',
@@ -181,8 +190,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: 'rgba(239,68,68,0.08)',
-        borderColor: 'rgba(239,68,68,0.3)',
+        backgroundColor: 'rgba(239,68,68,0.1)',
+        borderColor: 'rgba(239,68,68,0.35)',
         borderWidth: 1,
         borderRadius: 10,
         padding: 10,

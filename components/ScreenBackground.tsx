@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, View, ViewStyle } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet, View, ViewStyle, Animated, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 type Orb = {
@@ -19,6 +19,59 @@ type ScreenBackgroundProps = {
     style?: ViewStyle;
 };
 
+function DriftingOrb({ orb, index }: { orb: Orb; index: number }) {
+    const drift = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        const duration = 4500 + index * 1200; // faster, still staggered
+        const loop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(drift, {
+                    toValue: 1,
+                    duration,
+                    easing: Easing.inOut(Easing.sin),
+                    useNativeDriver: true,
+                }),
+                Animated.timing(drift, {
+                    toValue: 0,
+                    duration,
+                    easing: Easing.inOut(Easing.sin),
+                    useNativeDriver: true,
+                }),
+            ])
+        );
+        loop.start();
+        return () => loop.stop();
+    }, []);
+
+    const driftX = index % 2 === 0 ? 70 : -70;
+    const driftY = index % 2 === 0 ? -55 : 55;
+
+    const translateX = drift.interpolate({ inputRange: [0, 1], outputRange: [0, driftX] });
+    const translateY = drift.interpolate({ inputRange: [0, 1], outputRange: [0, driftY] });
+
+    return (
+        <Animated.View
+            pointerEvents="none"
+            style={[
+                styles.orb,
+                {
+                    width: orb.size,
+                    height: orb.size,
+                    borderRadius: orb.size / 2,
+                    backgroundColor: orb.color,
+                    opacity: orb.opacity,
+                    top: orb.top,
+                    bottom: orb.bottom,
+                    left: orb.left,
+                    right: orb.right,
+                    transform: [{ translateX }, { translateY }],
+                },
+            ]}
+        />
+    );
+}
+
 export default function ScreenBackground({
                                              orbs = [],
                                              vignette = true,
@@ -28,24 +81,7 @@ export default function ScreenBackground({
     return (
         <LinearGradient colors={['#0A1628', '#0F1F3A']} style={[styles.gradient, style]}>
             {orbs.map((orb, index) => (
-                <View
-                    key={index}
-                    pointerEvents="none"
-                    style={[
-                        styles.orb,
-                        {
-                            width: orb.size,
-                            height: orb.size,
-                            borderRadius: orb.size / 2,
-                            backgroundColor: orb.color,
-                            opacity: orb.opacity,
-                            top: orb.top,
-                            bottom: orb.bottom,
-                            left: orb.left,
-                            right: orb.right,
-                        },
-                    ]}
-                />
+                <DriftingOrb key={index} orb={orb} index={index} />
             ))}
 
             {vignette && (

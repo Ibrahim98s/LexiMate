@@ -72,7 +72,7 @@ export default function ResultsScreen() {
             <SafeAreaView style={{ flex: 1 }} edges={['top']}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                    <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/(tabs)')}>
                         <Ionicons name="arrow-back" size={20} color="#F0F4FF" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle} numberOfLines={1}>

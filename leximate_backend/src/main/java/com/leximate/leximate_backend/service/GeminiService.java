@@ -25,16 +25,21 @@ public class GeminiService {
         String base64Image = Base64.getEncoder().encodeToString(imageBytes);
 
         String prompt = """
-                You are analyzing a photo of a legal document. Read the text in the image, then respond with ONLY a JSON object (no markdown, no extra text) in this exact shape:
+                You are analyzing a photo that is supposed to show a legal document. First determine whether the image actually contains a readable document with text on it (not a blank/dark/blurry image, not an unrelated photo, not empty space).
+
+                Respond with ONLY a JSON object (no markdown, no extra text) in this exact shape:
                 {
-                  "title": "short descriptive title for this document",
-                  "originalLanguage": "detected original language code, e.g. en",
-                  "summary": "a plain-language summary of what this document says, 3-5 sentences, written in %s",
-                  "translation": "the full text of the document translated into %s",
-                  "riskLevel": "low" or "medium" or "high",
-                  "riskScore": a number from 0 to 100,
-                  "flaggedPoints": ["short risky clause 1", "short risky clause 2"]
+                  "documentDetected": true or false,
+                  "title": "short descriptive title for this document, or empty string if no document was detected",
+                  "originalLanguage": "detected original language code, e.g. en, or empty string if no document was detected",
+                  "summary": "a plain-language summary of what this document says, 3-5 sentences, written in %s. Empty string if no document was detected.",
+                  "translation": "the full text of the document translated into %s. Empty string if no document was detected.",
+                  "riskLevel": "low" or "medium" or "high", or null if no document was detected,
+                  "riskScore": a number from 0 to 100, or 0 if no document was detected,
+                  "flaggedPoints": ["short risky clause 1", "short risky clause 2"], or empty array if no document was detected
                 }
+
+                Set "documentDetected" to false whenever the image does not clearly contain a legal document with readable text. Do not guess or fabricate content in that case.
                 """.formatted(targetLanguage, targetLanguage);
 
         Map<String, Object> requestBody = Map.of(

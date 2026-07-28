@@ -105,6 +105,14 @@ public class DocumentController {
             byte[] imageBytes = file.getBytes();
             JsonNode result = geminiService.analyzeDocumentImage(imageBytes, targetLanguage);
 
+            boolean documentDetected = result.path("documentDetected").asBoolean(true);
+
+            if (!documentDetected) {
+                return ResponseEntity.unprocessableEntity().body(Map.of(
+                        "error", "We couldn't find a document in that photo. Make sure it's well-lit and fills the frame, then try again."
+                ));
+            }
+
             Document document = new Document();
             document.setUserId(user.getId());
             document.setTitle(result.path("title").asText("Scanned Document"));
