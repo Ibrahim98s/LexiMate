@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Linking, Alert, ActivityIndicator, Image } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, Linking, Alert, ActivityIndicator, Image, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,6 +40,7 @@ export default function ProfileScreen() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [justUpgraded, setJustUpgraded] = useState(false);
     const [avatarUri, setAvatarUri] = useState<string | null>(null);
+    const [comingSoonLabel, setComingSoonLabel] = useState<string | null>(null);
 
     const initials = userName
         ? userName.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
@@ -240,7 +241,7 @@ export default function ProfileScreen() {
                                     if (item.route) {
                                         router.push(item.route as any);
                                     } else {
-                                        Alert.alert('Coming Soon', `${item.label} isn't available yet.`);
+                                        setComingSoonLabel(item.label);
                                     }
                                 }}
                             >
@@ -259,6 +260,32 @@ export default function ProfileScreen() {
                     </TouchableOpacity>
 
                 </ScrollView>
+
+                <Modal
+                    visible={comingSoonLabel !== null}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setComingSoonLabel(null)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalCard}>
+                            <View style={styles.modalIconCircle}>
+                                <Ionicons name="time-outline" size={22} color="#2DD4BF" />
+                            </View>
+                            <Text style={styles.modalTitle}>Coming Soon</Text>
+                            <Text style={styles.modalMessage}>
+                                {comingSoonLabel} isn't available yet — we're still working on it.
+                            </Text>
+                            <TouchableOpacity
+                                style={styles.modalOkButton}
+                                onPress={() => setComingSoonLabel(null)}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={styles.modalOkText}>Got it</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Modal>
             </SafeAreaView>
         </LinearGradient>
     );
@@ -513,6 +540,56 @@ const styles = StyleSheet.create({
     },
     logoutText: {
         color: '#EF4444',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(10,22,40,0.75)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 32,
+    },
+    modalCard: {
+        width: '100%',
+        backgroundColor: '#132240',
+        borderColor: '#2A4470',
+        borderWidth: 1,
+        borderRadius: 18,
+        padding: 24,
+        alignItems: 'center',
+    },
+    modalIconCircle: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        backgroundColor: 'rgba(45,212,191,0.12)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 14,
+    },
+    modalTitle: {
+        color: '#F0F4FF',
+        fontSize: 17,
+        fontWeight: '700',
+        marginBottom: 8,
+    },
+    modalMessage: {
+        color: '#8A9BBF',
+        fontSize: 13,
+        textAlign: 'center',
+        lineHeight: 18,
+        marginBottom: 22,
+    },
+    modalOkButton: {
+        width: '100%',
+        paddingVertical: 12,
+        borderRadius: 12,
+        backgroundColor: '#1B4FD8',
+        alignItems: 'center',
+    },
+    modalOkText: {
+        color: '#F0F4FF',
         fontSize: 14,
         fontWeight: '600',
     },
