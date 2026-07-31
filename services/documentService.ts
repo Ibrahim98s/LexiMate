@@ -45,3 +45,18 @@ export async function askQuestion(
     const response = await api.post(`/documents/${documentId}/ask`, { question });
     return response.data.answer;
 }
+export async function deleteDocument(documentId: number): Promise<void> {
+    await api.delete(`/documents/${documentId}`);
+}
+export type ResponseGenerationResult = {
+    letter: string;
+    talkingPoints: string[];
+    nextSteps: string[];
+};
+
+export async function generateResponse(documentId: number): Promise<ResponseGenerationResult> {
+    const response = await api.post(`/documents/${documentId}/generate-response`, {}, {
+        timeout: 30000,
+    });
+    return response.data;
+}

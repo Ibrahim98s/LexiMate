@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -120,6 +121,62 @@ public class GeminiService {
                     .path("content").path("parts").get(0)
                     .path("text").asText()
                     .trim();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse Gemini response: " + responseJson, e);
+        }
+    }
+
+    public JsonNode generateResponse(String documentText, List<String> flaggedPoints, String riskLevel) {
+        String flaggedPointsList = String.join("; ", flaggedPoints);
+
+        String prompt = """
+                You are helping someone respond to a legal document that has been flagged as %s risk. Here is the translated document text:
+
+                ---
+                %s
+                ---
+
+                Flagged concerns: %s
+
+                Generate a response package to help this person take action. Respond with ONLY a JSON object (no markdown, no extra text) in this exact shape:
+                {
+                  "letter": "a formal, respectful letter or written response the person could send, addressing the flagged concerns, in plain language",
+                  "talkingPoints": ["short talking point 1", "short talking point 2", "short talking point 3"],
+                  "nextSteps": ["short actionable next step 1", "short actionable next step 2", "short actionable next step 3"]
+                }
+                """.formatted(riskLevel, documentText, flaggedPointsList);
+
+        Map<String, Object> requestBody = Map.of(
+                "contents", new Object[]{
+                        Map.of("parts", new Object[]{
+                                Map.of("text", prompt)
+                        })
+                }
+        );
+
+        String responseJson = webClient.post()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/models/gemini-2.5-flash:generateContent")
+                        .queryParam("key", apiKey)
+                        .build())
+                .bodyValue(requestBody)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+
+        try {
+            JsonNode root = objectMapper.readTree(responseJson);
+            String rawText = root
+                    .path("candidates").get(0)
+                    .path("content").path("parts").get(0)
+                    .path("text").asText();
+
+            String cleaned = rawText
+                    .replace("```json", "")
+                    .replace("```", "")
+                    .trim();
+
+            return objectMapper.readTree(cleaned);
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse Gemini response: " + responseJson, e);
         }

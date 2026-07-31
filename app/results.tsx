@@ -67,6 +67,8 @@ export default function ResultsScreen() {
         }
     }, [loading, result]);
 
+    const showLegalHelp = result?.riskLevel === 'medium' || result?.riskLevel === 'high';
+
     return (
         <LinearGradient colors={['#0A1628', '#0F1F3A']} style={styles.container}>
             <SafeAreaView style={{ flex: 1 }} edges={['top']}>
@@ -143,6 +145,30 @@ export default function ResultsScreen() {
                                     </View>
                                 </View>
                             </View>
+
+                            {showLegalHelp && (
+                                <TouchableOpacity
+                                    style={styles.legalHelpButton}
+                                    onPress={() => router.push({ pathname: '/response', params: { documentId: result.id.toString() } })}
+                                    activeOpacity={0.85}
+                                >
+                                    <LinearGradient
+                                        colors={['#EF4444', '#F59E0B']}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 0 }}
+                                        style={styles.legalHelpGradient}
+                                    >
+                                        <View style={styles.legalHelpIconCircle}>
+                                            <Ionicons name="shield-checkmark" size={20} color="#EF4444" />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={styles.legalHelpTitle}>This looks serious</Text>
+                                            <Text style={styles.legalHelpSubtitle}>Get a drafted response & next steps</Text>
+                                        </View>
+                                        <Ionicons name="arrow-forward" size={20} color="rgba(255,255,255,0.85)" />
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            )}
 
                             {/* Summary */}
                             <View style={styles.card}>
@@ -330,6 +356,40 @@ const styles = StyleSheet.create({
     metaChipText: {
         color: '#8A9BBF',
         fontSize: 11,
+    },
+    legalHelpButton: {
+        borderRadius: 16,
+        overflow: 'hidden',
+        marginBottom: 14,
+        shadowColor: '#EF4444',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35,
+        shadowRadius: 14,
+        elevation: 8,
+    },
+    legalHelpGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        gap: 14,
+    },
+    legalHelpIconCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#FFFFFF',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    legalHelpTitle: {
+        color: '#FFFFFF',
+        fontSize: 15,
+        fontWeight: '700',
+    },
+    legalHelpSubtitle: {
+        color: 'rgba(255,255,255,0.85)',
+        fontSize: 12,
+        marginTop: 2,
     },
     card: {
         backgroundColor: '#132240',

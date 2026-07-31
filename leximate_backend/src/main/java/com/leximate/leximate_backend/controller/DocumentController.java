@@ -174,6 +174,54 @@ public class DocumentController {
         }
     }
 
+    @PostMapping("/{id}/generate-response")
+    public ResponseEntity<?> generateResponseForDocument(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        Long userId = getCurrentUserId(authentication);
+        Optional<Document> documentOpt = documentRepository.findById(id);
+
+        if (documentOpt.isEmpty() || !documentOpt.get().getUserId().equals(userId)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        try {
+            Document document = documentOpt.get();
+            String documentText = document.getTranslation();
+
+            if (documentText == null || documentText.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "This document has no readable text to generate a response for"));
+            }
+
+            JsonNode result = geminiService.generateResponse(
+                    documentText,
+                    document.getFlaggedPoints(),
+                    document.getRiskLevel()
+            );
+
+            List<String> talkingPoints = new ArrayList<>();
+            if (result.path("talkingPoints").isArray()) {
+                result.path("talkingPoints").forEach(node -> talkingPoints.add(node.asText()));
+            }
+
+            List<String> nextSteps = new ArrayList<>();
+            if (result.path("nextSteps").isArray()) {
+                result.path("nextSteps").forEach(node -> nextSteps.add(node.asText()));
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "letter", result.path("letter").asText(""),
+                    "talkingPoints", talkingPoints,
+                    "nextSteps", nextSteps
+            ));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(Map.of("error", "Failed to generate response"));
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteDocument(@PathVariable Long id, Authentication authentication) {
         Long userId = getCurrentUserId(authentication);
