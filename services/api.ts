@@ -1,7 +1,7 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const BASE_URL = 'https://shortlist-epidermal-segment.ngrok-free.dev/api';
+const BASE_URL = 'https://leximate.onrender.com/api';
 
 const TOKEN_KEY = 'leximate_auth_token';
 
