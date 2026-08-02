@@ -24,6 +24,7 @@ export default function TabsLayout() {
 
     return (
         <Tabs
+            backBehavior="history"
             screenOptions={{
                 tabBarActiveTintColor: '#2DD4BF',
                 tabBarInactiveTintColor: '#8A9BBF',
