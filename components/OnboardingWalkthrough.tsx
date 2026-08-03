@@ -38,13 +38,15 @@ export default function OnboardingWalkthrough({ steps, onComplete }: Props) {
             return;
         }
 
-        const timeout = setTimeout(() => {
-            currentStep.ref.current?.measureInWindow((x, y, width, height) => {
-                setRect({ x, y, width, height });
+        const frame = requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                currentStep.ref.current?.measureInWindow((x, y, width, height) => {
+                    setRect({ x, y, width, height });
+                });
             });
-        }, 50);
+        });
 
-        return () => clearTimeout(timeout);
+        return () => cancelAnimationFrame(frame);
     }, [stepIndex]);
 
     useEffect(() => {

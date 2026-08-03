@@ -200,35 +200,33 @@ export default function HomeScreen() {
                         )}
                     </View>
 
-                    <Animated.View
-                        ref={scanRef}
-                        collapsable={false}
-                        style={{ transform: [{ scale: scanPulse }], marginBottom: !isPremium ? 8 : 28 }}
-                    >
-                        <View style={styles.scanGlowOuter} pointerEvents="none" />
-                        <View style={styles.scanGlowInner} pointerEvents="none" />
-                        <TouchableOpacity
-                            style={styles.scanButton}
-                            onPress={() => router.push('/scan')}
-                            activeOpacity={0.85}
-                        >
-                            <LinearGradient
-                                colors={['#1B4FD8', '#2DD4BF']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={styles.scanButtonGradient}
+                    <View ref={scanRef} collapsable={false} style={{ marginBottom: !isPremium ? 8 : 28 }}>
+                        <Animated.View style={{ transform: [{ scale: scanPulse }] }}>
+                            <View style={styles.scanGlowOuter} pointerEvents="none" />
+                            <View style={styles.scanGlowInner} pointerEvents="none" />
+                            <TouchableOpacity
+                                style={styles.scanButton}
+                                onPress={() => router.push('/scan')}
+                                activeOpacity={0.85}
                             >
-                                <View style={styles.scanIconCircle}>
-                                    <Ionicons name="camera" size={22} color="#1B4FD8" />
-                                </View>
-                                <View>
-                                    <Text style={styles.scanButtonTitle}>Scan Document</Text>
-                                    <Text style={styles.scanButtonSub}>Tap to analyze a legal document</Text>
-                                </View>
-                                <Ionicons name="arrow-forward" size={20} color="rgba(255,255,255,0.7)" style={{ marginLeft: 'auto' }} />
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    </Animated.View>
+                                <LinearGradient
+                                    colors={['#1B4FD8', '#2DD4BF']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.scanButtonGradient}
+                                >
+                                    <View style={styles.scanIconCircle}>
+                                        <Ionicons name="camera" size={22} color="#1B4FD8" />
+                                    </View>
+                                    <View>
+                                        <Text style={styles.scanButtonTitle}>Scan Document</Text>
+                                        <Text style={styles.scanButtonSub}>Tap to analyze a legal document</Text>
+                                    </View>
+                                    <Ionicons name="arrow-forward" size={20} color="rgba(255,255,255,0.7)" style={{ marginLeft: 'auto' }} />
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </Animated.View>
+                    </View>
 
                     {!isPremium && (
                         <View ref={upgradeRef} collapsable={false}>
