@@ -10,6 +10,7 @@ import Button from '../../components/Button';
 import Input from '../../components/Input';
 import ScreenBackground from '../../components/ScreenBackground';
 import { useAuthStore } from '../../store/authStore';
+import { useOnboardingStore } from '../../store/onboardingStore';
 
 export default function RegisterScreen() {
     const router = useRouter();
@@ -63,6 +64,7 @@ export default function RegisterScreen() {
         setIsSubmitting(true);
         try {
             await register(fullName.trim(), email.trim(), password);
+            useOnboardingStore.getState().setJustRegistered(true);
             router.replace({ pathname: '/(auth)/verify-email', params: { email: email.trim() } });
         } catch (error: any) {
             const message = error?.response?.data?.error || 'Unable to create account. Please try again.';

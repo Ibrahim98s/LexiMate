@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '../store/authStore';
+import { useOnboardingStore } from '../store/onboardingStore';
 import AnimatedSplashScreen from '../components/AnimatedSplashScreen';
 
 SplashScreen.preventAutoHideAsync();
@@ -15,6 +16,7 @@ export default function RootLayout() {
 
     useEffect(() => {
         checkAuth();
+        useOnboardingStore.getState().hydrate();
     }, []);
 
     const onRootLayout = useCallback(() => {

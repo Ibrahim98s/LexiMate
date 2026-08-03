@@ -10,6 +10,8 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import Svg, { Path, Line, Circle } from 'react-native-svg';
 import { getDocumentHistory, DocumentAnalysisResult } from '../../services/documentService';
 import { useAuthStore } from '../../store/authStore';
+import { useOnboardingStore } from '../../store/onboardingStore';
+import OnboardingWalkthrough, { OnboardingStep } from '../../components/OnboardingWalkthrough';
 
 const riskColor = (level: string | null) => {
     switch (level) {
@@ -76,6 +78,18 @@ export default function HomeScreen() {
     const scanLimit = useAuthStore((state) => state.scanLimit);
     const firstName = userName ? userName.split(' ')[0] : null;
 
+    const justRegistered = useOnboardingStore((state) => state.justRegistered);
+    const hasSeenOnboarding = useOnboardingStore((state) => state.hasSeenOnboarding);
+    const isHydrated = useOnboardingStore((state) => state.isHydrated);
+    const completeOnboarding = useOnboardingStore((state) => state.completeOnboarding);
+
+    const scanRef = useRef<View>(null);
+    const statsRef = useRef<View>(null);
+    const recentDocsRef = useRef<View>(null);
+    const upgradeRef = useRef<View>(null);
+
+    const [showOnboarding, setShowOnboarding] = useState(false);
+
     const loadHistory = useCallback(async () => {
         try {
             const data = await getDocumentHistory();
@@ -89,7 +103,7 @@ export default function HomeScreen() {
 
     useFocusEffect(
         useCallback(() => {
-            loadHistory();
+            void loadHistory();
         }, [loadHistory])
     );
 
@@ -107,10 +121,47 @@ export default function HomeScreen() {
         ).start();
     }, []);
 
+    useEffect(() => {
+        if (isHydrated && justRegistered && !hasSeenOnboarding && !isLoading) {
+            const timeout = setTimeout(() => setShowOnboarding(true), 400);
+            return () => clearTimeout(timeout);
+        }
+    }, [isHydrated, justRegistered, hasSeenOnboarding, isLoading]);
+
     const recentDocs = documents.slice(0, 3);
     const highRiskCount = documents.filter((d) => d.riskLevel === 'high').length;
     const languageCount = new Set(documents.map((d) => d.targetLanguage)).size;
     const scansRemaining = Math.max(scanLimit - scansUsed, 0);
+
+    const onboardingSteps: OnboardingStep[] = [
+        {
+            ref: scanRef,
+            title: 'Scan a document',
+            description: 'Tap here to photograph any legal document — lease, contract, or court notice — and get an instant plain-language breakdown.',
+        },
+        {
+            ref: statsRef,
+            title: 'Track your documents',
+            description: 'See how many documents you have scanned, how many are high-risk, and how many languages you have used.',
+        },
+        {
+            ref: recentDocsRef,
+            title: 'Recent documents',
+            description: 'Your scanned documents show up here with a risk score. Tap any one to see the full breakdown.',
+        },
+        ...(!isPremium
+            ? [{
+                ref: upgradeRef,
+                title: 'Go premium',
+                description: 'Upgrade anytime for unlimited scans and full AI reports.',
+            }]
+            : []),
+    ];
+
+    function handleOnboardingComplete() {
+        setShowOnboarding(false);
+        void completeOnboarding();
+    }
 
     return (
         <LinearGradient colors={['#0A1628', '#0F1F3A']} style={styles.gradient}>
@@ -149,7 +200,11 @@ export default function HomeScreen() {
                         )}
                     </View>
 
-                    <Animated.View style={{ transform: [{ scale: scanPulse }], marginBottom: !isPremium ? 8 : 28 }}>
+                    <Animated.View
+                        ref={scanRef}
+                        collapsable={false}
+                        style={{ transform: [{ scale: scanPulse }], marginBottom: !isPremium ? 8 : 28 }}
+                    >
                         <View style={styles.scanGlowOuter} pointerEvents="none" />
                         <View style={styles.scanGlowInner} pointerEvents="none" />
                         <TouchableOpacity
@@ -176,29 +231,31 @@ export default function HomeScreen() {
                     </Animated.View>
 
                     {!isPremium && (
-                        <TouchableOpacity
-                            style={styles.scansLeftRow}
-                            onPress={() => router.push('/profile')}
-                            activeOpacity={0.7}
-                        >
-                            <Ionicons
-                                name={scansRemaining === 0 ? 'lock-closed' : 'flash-outline'}
-                                size={13}
-                                color={scansRemaining === 0 ? '#EF4444' : '#8A9BBF'}
-                            />
-                            <Text style={[styles.scansLeftText, scansRemaining === 0 && { color: '#EF4444' }]}>
-                                {scansRemaining === 0
-                                    ? "You're out of free scans this month · Upgrade"
-                                    : `${scansRemaining} free scan${scansRemaining === 1 ? '' : 's'} left this month · Upgrade`}
-                            </Text>
-                        </TouchableOpacity>
+                        <View ref={upgradeRef} collapsable={false}>
+                            <TouchableOpacity
+                                style={styles.scansLeftRow}
+                                onPress={() => router.push('/profile')}
+                                activeOpacity={0.7}
+                            >
+                                <Ionicons
+                                    name={scansRemaining === 0 ? 'lock-closed' : 'flash-outline'}
+                                    size={13}
+                                    color={scansRemaining === 0 ? '#EF4444' : '#8A9BBF'}
+                                />
+                                <Text style={[styles.scansLeftText, scansRemaining === 0 && { color: '#EF4444' }]}>
+                                    {scansRemaining === 0
+                                        ? "You're out of free scans this month · Upgrade"
+                                        : `${scansRemaining} free scan${scansRemaining === 1 ? '' : 's'} left this month · Upgrade`}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
                     )}
 
                     <Animated.View style={{
                         opacity: fadeAnim,
                         transform: [{ translateY: slideAnim }]
                     }}>
-                        <View style={styles.statsRow}>
+                        <View ref={statsRef} collapsable={false} style={styles.statsRow}>
                             <View style={styles.statCard}>
                                 <View style={[styles.statIconCircle, { backgroundColor: 'rgba(27,79,216,0.15)' }]}>
                                     <Ionicons name="document-text-outline" size={18} color="#1B4FD8" />
@@ -224,52 +281,58 @@ export default function HomeScreen() {
                             </View>
                         </View>
 
-                        <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>Recent Documents</Text>
-                            <TouchableOpacity onPress={() => router.push('/(tabs)/history')}>
-                                <Text style={styles.sectionLink}>See all →</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        {isLoading ? (
-                            <ActivityIndicator size="small" color="#2DD4BF" style={{ marginTop: 20 }} />
-                        ) : recentDocs.length === 0 ? (
-                            <View style={styles.emptyState}>
-                                <View style={styles.emptyIconCircle}>
-                                    <Ionicons name="document-outline" size={28} color="#4A5A7A" />
-                                </View>
-                                <Text style={styles.emptyTitle}>No documents yet</Text>
-                                <Text style={styles.emptyText}>
-                                    Scan your first legal document to get started
-                                </Text>
-                            </View>
-                        ) : (
-                            recentDocs.map((doc) => (
-                                <TouchableOpacity
-                                    key={doc.id}
-                                    style={styles.docCard}
-                                    onPress={() => router.push({ pathname: '/results', params: { documentId: doc.id.toString() } })}
-                                    activeOpacity={0.75}
-                                >
-                                    <View style={[styles.riskPill, { backgroundColor: riskBg(doc.riskLevel) }]}>
-                                        <Text style={[styles.riskPillText, { color: riskColor(doc.riskLevel) }]}>
-                                            {doc.riskLevel ? doc.riskLevel.toUpperCase() : '—'}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.docInfo}>
-                                        <Text style={styles.docTitle} numberOfLines={1}>{doc.title}</Text>
-                                        <Text style={styles.docMeta}>
-                                            {new Date(doc.createdAt).toLocaleDateString()}
-                                            {doc.riskScore != null ? ` · Risk ${doc.riskScore}/100` : ''}
-                                        </Text>
-                                    </View>
-                                    <Ionicons name="chevron-forward" size={18} color="#4A5A7A" />
+                        <View ref={recentDocsRef} collapsable={false}>
+                            <View style={styles.sectionHeader}>
+                                <Text style={styles.sectionTitle}>Recent Documents</Text>
+                                <TouchableOpacity onPress={() => router.push('/(tabs)/history')}>
+                                    <Text style={styles.sectionLink}>See all →</Text>
                                 </TouchableOpacity>
-                            ))
-                        )}
+                            </View>
+
+                            {isLoading ? (
+                                <ActivityIndicator size="small" color="#2DD4BF" style={{ marginTop: 20 }} />
+                            ) : recentDocs.length === 0 ? (
+                                <View style={styles.emptyState}>
+                                    <View style={styles.emptyIconCircle}>
+                                        <Ionicons name="document-outline" size={28} color="#4A5A7A" />
+                                    </View>
+                                    <Text style={styles.emptyTitle}>No documents yet</Text>
+                                    <Text style={styles.emptyText}>
+                                        Scan your first legal document to get started
+                                    </Text>
+                                </View>
+                            ) : (
+                                recentDocs.map((doc) => (
+                                    <TouchableOpacity
+                                        key={doc.id}
+                                        style={styles.docCard}
+                                        onPress={() => router.push({ pathname: '/results', params: { documentId: doc.id.toString() } })}
+                                        activeOpacity={0.75}
+                                    >
+                                        <View style={[styles.riskPill, { backgroundColor: riskBg(doc.riskLevel) }]}>
+                                            <Text style={[styles.riskPillText, { color: riskColor(doc.riskLevel) }]}>
+                                                {doc.riskLevel ? doc.riskLevel.toUpperCase() : '—'}
+                                            </Text>
+                                        </View>
+                                        <View style={styles.docInfo}>
+                                            <Text style={styles.docTitle} numberOfLines={1}>{doc.title}</Text>
+                                            <Text style={styles.docMeta}>
+                                                {new Date(doc.createdAt).toLocaleDateString()}
+                                                {doc.riskScore != null ? ` · Risk ${doc.riskScore}/100` : ''}
+                                            </Text>
+                                        </View>
+                                        <Ionicons name="chevron-forward" size={18} color="#4A5A7A" />
+                                    </TouchableOpacity>
+                                ))
+                            )}
+                        </View>
                     </Animated.View>
                 </ScrollView>
             </SafeAreaView>
+
+            {showOnboarding && (
+                <OnboardingWalkthrough steps={onboardingSteps} onComplete={handleOnboardingComplete} />
+            )}
         </LinearGradient>
     );
 }
