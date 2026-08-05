@@ -41,6 +41,7 @@ export default function ProfileScreen() {
     const [justUpgraded, setJustUpgraded] = useState(false);
     const [avatarUri, setAvatarUri] = useState<string | null>(null);
     const [comingSoonLabel, setComingSoonLabel] = useState<string | null>(null);
+    const [showAvatarOptions, setShowAvatarOptions] = useState(false);
 
     const initials = userName
         ? userName.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
@@ -54,6 +55,7 @@ export default function ProfileScreen() {
     }, [userEmail]);
 
     async function handlePickAvatar() {
+        setShowAvatarOptions(false);
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
             Alert.alert('Permission needed', 'Please allow access to your photo library to set a profile picture.');
@@ -71,6 +73,20 @@ export default function ProfileScreen() {
             const uri = result.assets[0].uri;
             setAvatarUri(uri);
             await AsyncStorage.setItem(getAvatarKey(userEmail), uri);
+        }
+    }
+
+    async function handleRemoveAvatar() {
+        setShowAvatarOptions(false);
+        setAvatarUri(null);
+        await AsyncStorage.removeItem(getAvatarKey(userEmail));
+    }
+
+    function handleAvatarPress() {
+        if (avatarUri) {
+            setShowAvatarOptions(true);
+        } else {
+            handlePickAvatar();
         }
     }
 
@@ -132,7 +148,7 @@ export default function ProfileScreen() {
                 <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
                     <View style={styles.profileHeader}>
-                        <TouchableOpacity style={styles.avatarContainer} onPress={handlePickAvatar}>
+                        <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
                             {avatarUri ? (
                                 <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
                             ) : (
@@ -260,6 +276,54 @@ export default function ProfileScreen() {
                     </TouchableOpacity>
 
                 </ScrollView>
+
+                <Modal
+                    visible={showAvatarOptions}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setShowAvatarOptions(false)}
+                >
+                    <TouchableOpacity
+                        style={styles.modalOverlay}
+                        activeOpacity={1}
+                        onPress={() => setShowAvatarOptions(false)}
+                    >
+                        <TouchableOpacity activeOpacity={1} style={styles.sheetCard}>
+                            <View style={styles.sheetHandle} />
+                            <Text style={styles.sheetTitle}>Profile Photo</Text>
+
+                            <TouchableOpacity
+                                style={styles.sheetOption}
+                                onPress={handlePickAvatar}
+                                activeOpacity={0.75}
+                            >
+                                <View style={[styles.sheetOptionIconCircle, { backgroundColor: 'rgba(45,212,191,0.12)' }]}>
+                                    <Ionicons name="image-outline" size={18} color="#2DD4BF" />
+                                </View>
+                                <Text style={styles.sheetOptionText}>Change Photo</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.sheetOption}
+                                onPress={handleRemoveAvatar}
+                                activeOpacity={0.75}
+                            >
+                                <View style={[styles.sheetOptionIconCircle, { backgroundColor: 'rgba(239,68,68,0.12)' }]}>
+                                    <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                                </View>
+                                <Text style={[styles.sheetOptionText, { color: '#EF4444' }]}>Remove Photo</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={styles.sheetCancelButton}
+                                onPress={() => setShowAvatarOptions(false)}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={styles.sheetCancelText}>Cancel</Text>
+                            </TouchableOpacity>
+                        </TouchableOpacity>
+                    </TouchableOpacity>
+                </Modal>
 
                 <Modal
                     visible={comingSoonLabel !== null}
@@ -590,6 +654,61 @@ const styles = StyleSheet.create({
     },
     modalOkText: {
         color: '#F0F4FF',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    sheetCard: {
+        width: '100%',
+        backgroundColor: '#132240',
+        borderColor: '#2A4470',
+        borderWidth: 1,
+        borderRadius: 20,
+        padding: 20,
+        alignItems: 'center',
+    },
+    sheetHandle: {
+        width: 36,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: '#2A4470',
+        marginBottom: 14,
+    },
+    sheetTitle: {
+        color: '#F0F4FF',
+        fontSize: 15,
+        fontWeight: '700',
+        marginBottom: 16,
+    },
+    sheetOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        width: '100%',
+        paddingVertical: 12,
+    },
+    sheetOptionIconCircle: {
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    sheetOptionText: {
+        color: '#F0F4FF',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    sheetCancelButton: {
+        width: '100%',
+        marginTop: 12,
+        paddingVertical: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#2A4470',
+        alignItems: 'center',
+    },
+    sheetCancelText: {
+        color: '#8A9BBF',
         fontSize: 14,
         fontWeight: '600',
     },

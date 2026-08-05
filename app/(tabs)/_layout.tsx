@@ -1,7 +1,13 @@
-import React from 'react';
-import { Tabs, useRouter } from 'expo-router';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { Tabs, useRouter, usePathname } from 'expo-router';
+import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore } from '../../store/authStore';
+
+function getAvatarKey(userEmail: string | null | undefined) {
+    return `leximate_avatar_uri_${userEmail || 'anonymous'}`;
+}
 
 function TabIcon({
                      name,
@@ -21,6 +27,15 @@ function TabIcon({
 
 export default function TabsLayout() {
     const router = useRouter();
+    const pathname = usePathname();
+    const userEmail = useAuthStore((state) => state.userEmail);
+    const [avatarUri, setAvatarUri] = useState<string | null>(null);
+
+    useEffect(() => {
+        AsyncStorage.getItem(getAvatarKey(userEmail)).then((uri) => {
+            setAvatarUri(uri || null);
+        });
+    }, [userEmail, pathname]);
 
     return (
         <Tabs
@@ -55,7 +70,11 @@ export default function TabsLayout() {
                         onPress={() => router.push('/profile')}
                         style={{ marginRight: 16 }}
                     >
-                        <Ionicons name="person-circle-outline" size={26} color="#F0F4FF" />
+                        {avatarUri ? (
+                            <Image source={{ uri: avatarUri }} style={styles.headerAvatar} />
+                        ) : (
+                            <Ionicons name="person-circle-outline" size={26} color="#F0F4FF" />
+                        )}
                     </TouchableOpacity>
                 ),
             }}
@@ -118,5 +137,12 @@ const styles = StyleSheet.create({
     },
     iconWrapperFocused: {
         backgroundColor: 'rgba(45,212,191,0.15)',
+    },
+    headerAvatar: {
+        width: 26,
+        height: 26,
+        borderRadius: 13,
+        borderWidth: 1,
+        borderColor: '#2DD4BF',
     },
 });
