@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -30,7 +30,19 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "LexiMate needs camera access to scan your legal documents."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "LexiMate needs photo library access to set your profile picture."
+        }
+      ]
     ],
     "extra": {
       "router": {},
